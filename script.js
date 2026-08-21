@@ -95,9 +95,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const contactForm = document.getElementById("contact-form")
   const formStatus = document.getElementById("form-status")
-  // FormSubmit activation hash (from confirmation email) — required for live Vercel
-  const CONTACT_FORM_ID = "5cdc67390d713f0cad511a708ee51bc8"
   const CONTACT_INBOX = "moosakhan033233@gmail.com"
+  // Free key from https://web3forms.com — paste Access Key here (FormSubmit is broken/expired)
+  const WEB3FORMS_ACCESS_KEY = ""
   const EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   const NAME_PATTERN = /^[\p{L}\s.'-]{2,80}$/u
 
@@ -116,11 +116,25 @@ document.addEventListener("DOMContentLoaded", () => {
     return value.replace(/[\u0000-\u001F\u007F]/g, "").trim().slice(0, maxLength)
   }
 
+  function openGmailCompose(name, email, subject, message) {
+    const body =
+      "Name: " + name + "\nEmail: " + email + "\n\n" + message
+    const gmailUrl =
+      "https://mail.google.com/mail/?view=cm&fs=1" +
+      "&to=" +
+      encodeURIComponent(CONTACT_INBOX) +
+      "&su=" +
+      encodeURIComponent(subject) +
+      "&body=" +
+      encodeURIComponent(body)
+    window.open(gmailUrl, "_blank", "noopener,noreferrer")
+  }
+
   if (contactForm) {
     contactForm.addEventListener("submit", async (e) => {
       e.preventDefault()
 
-      const honeypot = contactForm.querySelector('input[name="_honey"]')
+      const honeypot = contactForm.querySelector('input[name="botcheck"]')
       if (honeypot && honeypot.value) {
         setFormStatus("Thank you for your message! I will get back to you soon.", "success")
         contactForm.reset()
@@ -160,30 +174,38 @@ document.addEventListener("DOMContentLoaded", () => {
       setFormStatus("Sending your message...", "")
 
       try {
-        const response = await fetch("https://formsubmit.co/ajax/" + CONTACT_FORM_ID, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            name,
-            email,
-            _replyto: email,
-            _subject: subject,
-            message,
-            _template: "table",
-            _captcha: "false",
-          }),
-        })
-        const result = await response.json().catch(() => ({}))
-        if (!response.ok || result.success === "false" || result.success === false) {
-          throw new Error("Form service rejected the request")
+        if (WEB3FORMS_ACCESS_KEY) {
+          const response = await fetch("https://api.web3forms.com/submit", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              access_key: WEB3FORMS_ACCESS_KEY,
+              name,
+              email,
+              subject,
+              message,
+              from_name: name,
+              replyto: email,
+            }),
+          })
+          const result = await response.json().catch(() => ({}))
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || "Send failed")
+          }
+          contactForm.reset()
+          setFormStatus("Thank you! Your message has been sent.", "success")
+        } else {
+          // Works immediately on live without FormSubmit activation
+          openGmailCompose(name, email, subject, message)
+          contactForm.reset()
+          setFormStatus("Gmail opened with your message. Click Send there to deliver it.", "success")
         }
-        contactForm.reset()
-        setFormStatus("Thank you! Your message has been sent.", "success")
       } catch (error) {
-        setFormStatus("Could not send right now. Please email " + CONTACT_INBOX + " directly.", "error")
+        openGmailCompose(name, email, subject, message)
+        setFormStatus("Opened Gmail as backup. Click Send there, or email " + CONTACT_INBOX, "error")
       } finally {
         submitBtn.disabled = false
         submitBtn.textContent = originalText
