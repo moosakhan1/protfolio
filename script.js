@@ -95,6 +95,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const contactForm = document.getElementById("contact-form")
   const formStatus = document.getElementById("form-status")
+  // FormSubmit activation hash (from confirmation email) — required for live Vercel
+  const CONTACT_FORM_ID = "5cdc67390d713f0cad511a708ee51bc8"
   const CONTACT_INBOX = "moosakhan033233@gmail.com"
   const EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
   const NAME_PATTERN = /^[\p{L}\s.'-]{2,80}$/u
@@ -158,7 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setFormStatus("Sending your message...", "")
 
       try {
-        const response = await fetch("https://formsubmit.co/ajax/" + CONTACT_INBOX, {
+        const response = await fetch("https://formsubmit.co/ajax/" + CONTACT_FORM_ID, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -181,7 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
         contactForm.reset()
         setFormStatus("Thank you! Your message has been sent.", "success")
       } catch (error) {
-        setFormStatus("Could not send right now. Please email moosakhan033233@gmail.com directly.", "error")
+        setFormStatus("Could not send right now. Please email " + CONTACT_INBOX + " directly.", "error")
       } finally {
         submitBtn.disabled = false
         submitBtn.textContent = originalText
